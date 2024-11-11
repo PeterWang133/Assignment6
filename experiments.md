@@ -167,6 +167,16 @@ Sorting portion timings:
 
 ## Observations and Conclusions
 
-*Reflect on the experiment results and the optimal number of threads for your concurrent merge sort implementation on different hosts or platforms. Try to explain why the performance stops improving or even starts deteriorating at certain thread counts.*
+The experiment results across two different hosts show that the optimal number of threads for the concurrent merge sort implementation varies significantly based on the hardware specifications of each platform.
 
+On Host 1 (Krish’s MacBook Pro), which has a powerful Apple M1 Max CPU with 10 cores and substantial cache, we see a moderate improvement in sorting time as the thread count increases from 1 to 2 and 10. However, as the thread count goes beyond 10, there is little to no improvement, and in some cases, performance slightly deteriorates. This result aligns with the capabilities of the host’s CPU, which can handle a high level of parallelism efficiently up to the core limit. Beyond 10 threads, the system likely experiences overhead from context switching and thread management, which reduces or cancels out the expected performance gains from additional threads.
 
+On Host 2 (GitHub Codespace), which has only 2 cores and more limited cache (32 KB L1, 512 KB L2), performance improvements are noticeable when moving from 1 to 2 threads. However, beyond 2 threads, we observe a decline in performance. This is expected, as the 2-core limit means additional threads cannot run in parallel; instead, they cause increased context switching and thread management overhead, leading to diminishing returns. The Codespace environment is not as capable of handling high thread counts as Host 1, which explains why performance stalls and even deteriorates with more than 2 threads.
+
+ Creating and managing more threads than there are physical cores leads to increased CPU time spent on context switching rather than actual computation. This overhead is particularly noticeable on Host 2, where more than 2 threads cause inefficient resource use.
+
+Host 1’s larger cache can handle higher thread counts more effectively, reducing cache misses. In contrast, Host 2’s smaller cache means that more threads lead to cache contention, slowing down the program as threads wait for memory.
+
+The limited parallelism in parts of the merge sort algorithm, such as merging, constrains speedup. As thread count rises, the parallelizable portion of the code offers diminishing returns, limiting the benefits from additional threads.
+
+In summary, the optimal number of threads for the concurrent merge sort implementation depends heavily on the number of available cores and cache size. On high-core-count systems like Host 1, performance can benefit from more threads up to the core limit, with diminishing returns beyond that. For low-core-count environments like Host 2, performance peaks at the core count (2 threads), and additional threads introduce unnecessary overhead. These results underscore the importance of tuning thread counts to match the specific hardware capabilities of the host for efficient parallel processing.
