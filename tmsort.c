@@ -3,7 +3,7 @@
  *
  * A multi-threaded implementation of merge sort that uses POSIX threads to
  * recursively divide and sort a large array of integers. The number of threads
- * used can be set through an environment variable `MSORT_THREADS`.
+ * used can be set through an environment variable MSORT_THREADS.
  *
  * This program reads an array of integers from standard input, sorts them in
  * ascending order using merge sort, and outputs the sorted array to standard output.
@@ -11,18 +11,17 @@
  * Assumptions:
  * - The program takes one argument, an integer -> represents number of elements
  * - The input is a series of integers separated by whitespace.
- * - The environment variable `MSORT_THREADS` specifies the max number of threads.
- * - Uses up to `thread_count` threads to divide and conquer the sorting task.
+ * - The environment variable MSORT_THREADS specifies the max number of threads.
+ * - Uses up to thread_count threads to divide and conquer the sorting task.
  *
  * 2 Global Variables:
- * - `thread_count` sets the total number of threads allowed.
- * - `active_threads` keeps track of currently active threads.
+ * - thread_count sets the total number of threads allowed.
+ * - active_threads keeps track of currently active threads.
  *
  * Compilation: gcc -pthread -o tmsort tmsort.c
  * Usage: ./tmsort <num_elements> -> ./tmsort 50000
  */
 
-// Imported neccesary libraries for implementation
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,16 +38,21 @@
 #define log(...)
 #endif
 
+#define MIN_THREAD_SIZE 10000000  // Further increase segment size for thread creation
+
 int thread_count = 1;   // Default number of threads
-int active_threads = 0; // Track active threads
-pthread_mutex_t thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// Thread pool to manage threads
+pthread_t *thread_pool;
+int pool_size = 0;
+pthread_mutex_t pool_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // Struct to pass arguments to each thread
 struct thread_args {
-    long *nums; // Array of integers to sort
-    long *target; // Target array to store sorted results
-    int from; // Starting index for sorting
-    int to; // Ending index for sorting 
+    long *nums;       // Array of integers to sort
+    long *target;     // Target array to store sorted results
+    int from;         // Starting index for sorting
+    int to;           // Ending index for sorting 
 };
 
 /**
@@ -98,6 +102,7 @@ void merge(long nums[], int from, int mid, int to, long target[]) {
     while (left < mid) target[i++] = nums[left++];
     while (right < to) target[i++] = nums[right++];
 }
+
 /**
  * Recursive threaded merge sort function
  * splits the array and assigns sorting tasks to threads when below the threshold.
@@ -108,7 +113,7 @@ void *threaded_merge_sort(void *args);
 /**
  * Recursively sorts an array of integers using merge sort and multi-threading.
  * Divides the array and creates threads for each half as allowed.
- 
+ * 
  * @param nums: Source array to sort.
  * @param from: Starting index of the array section.
  * @param to: Ending index of the array section.
@@ -119,42 +124,32 @@ void merge_sort_aux(long nums[], int from, int to, long target[]) {
 
     int mid = (from + to) / 2;
 
-    // Create left and right thread arguments
     pthread_t left_thread, right_thread;
     struct thread_args left_args = {target, nums, from, mid};
     struct thread_args right_args = {target, nums, mid, to};
 
     int created_left = 0, created_right = 0;
-
-    // Lock for updating active thread count safely
-    pthread_mutex_lock(&thread_count_mutex);
-    if (active_threads < thread_count) {
-        // Create left thread
-        active_threads++;
+    
+    if (pool_size < thread_count && (mid - from) >= MIN_THREAD_SIZE) {
+        pthread_mutex_lock(&pool_lock);
         created_left = pthread_create(&left_thread, NULL, threaded_merge_sort, &left_args) == 0;
+        if (created_left) thread_pool[pool_size++] = left_thread;
+        pthread_mutex_unlock(&pool_lock);
     }
-    if (active_threads < thread_count) {
-        // Create right thread
-        active_threads++;
+    if (pool_size < thread_count && (to - mid) >= MIN_THREAD_SIZE) {
+        pthread_mutex_lock(&pool_lock);
         created_right = pthread_create(&right_thread, NULL, threaded_merge_sort, &right_args) == 0;
+        if (created_right) thread_pool[pool_size++] = right_thread;
+        pthread_mutex_unlock(&pool_lock);
     }
-    pthread_mutex_unlock(&thread_count_mutex);
 
-    // If threads were created, wait for them
     if (created_left) pthread_join(left_thread, NULL);
-    else merge_sort_aux(target, from, mid, nums);  // Fall back to sequential
+    else merge_sort_aux(target, from, mid, nums);
 
     if (created_right) pthread_join(right_thread, NULL);
-    else merge_sort_aux(target, mid, to, nums);  // Fall back to sequential
+    else merge_sort_aux(target, mid, to, nums);
 
-    // Merge sorted halves
     merge(nums, from, mid, to, target);
-
-    // Decrement active thread count
-    pthread_mutex_lock(&thread_count_mutex);
-    if (created_left) active_threads--;
-    if (created_right) active_threads--;
-    pthread_mutex_unlock(&thread_count_mutex);
 }
 
 /**
@@ -177,11 +172,17 @@ long *merge_sort(long nums[], int count) {
     long *result = calloc(count, sizeof(long));
     assert(result != NULL);
 
-    memmove(result, nums, count * sizeof(long));  // Copy input array
+    memmove(result, nums, count * sizeof(long));
+
+    pthread_mutex_lock(&pool_lock);
+    thread_pool = malloc(thread_count * sizeof(pthread_t));
+    pool_size = 0;
+    pthread_mutex_unlock(&pool_lock);
 
     struct thread_args args = {nums, result, 0, count};
-    merge_sort_aux(nums, 0, count, result);       // Start sorting
+    merge_sort_aux(nums, 0, count, result);
 
+    free(thread_pool);
     return result;
 }
 
@@ -194,14 +195,13 @@ long *merge_sort(long nums[], int count) {
  */
 int allocate_load_array(int argc, char **argv, long **array) {
     assert(argc > 1);
-    int count = atoi(argv[1]);  // Parse the array size from the second argument
+    int count = atoi(argv[1]);
 
     *array = calloc(count, sizeof(long));
     assert(*array != NULL);
 
     long element;
     tty_printf("Enter %d elements, separated by whitespace\n", count);
-    // Read each element into the array, stopping at the specified count
     int i = 0;
     while (i < count && scanf("%ld", &element) != EOF) {
         (*array)[i++] = element;
@@ -210,8 +210,6 @@ int allocate_load_array(int argc, char **argv, long **array) {
     return count;
 }
 
-// Main function to parse input, read the array, sort it using multi-threaded
-// merge sort, and output the sorted array. 
 int main(int argc, char **argv) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <n>\n", argv[0]);
@@ -220,13 +218,11 @@ int main(int argc, char **argv) {
 
     struct timeval begin, end;
 
-    // Get number of threads from environment variable MSORT_THREADS
     if (getenv("MSORT_THREADS") != NULL)
         thread_count = atoi(getenv("MSORT_THREADS"));
 
     log("Running with %d thread(s). Reading input.\n", thread_count);
 
-    // Read input array
     gettimeofday(&begin, 0);
     long *array = NULL;
     int count = allocate_load_array(argc, argv, &array);
@@ -234,15 +230,14 @@ int main(int argc, char **argv) {
 
     log("Array read in %f seconds, beginning sort.\n", time_in_secs(&begin, &end));
 
-    // Sort the array using multi-threaded merge sort
     gettimeofday(&begin, 0);
     long *result = merge_sort(array, count);
     gettimeofday(&end, 0);
   
     log("Sorting completed in %f seconds.\n", time_in_secs(&begin, &end));
 
-    // Print the sorted result
     gettimeofday(&begin, 0);
+    print_long_array(result, count);
     gettimeofday(&end, 0);
   
     log("Array printed in %f seconds.\n", time_in_secs(&begin, &end));

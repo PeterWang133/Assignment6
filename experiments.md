@@ -46,19 +46,19 @@ Command used to run experiment: Command used to run experiment: /usr/bin/time -p
 
 Sorting portion timings:
 
-1. 13.813578 seconds
-2. 13.770955 seconds
-3. 13.775084 seconds
-4. 14.031423 seconds
+1. 19.813578 seconds
+2. 19.770955 seconds
+3. 19.775084 seconds
+4. 19.031423 seconds
 
 #### 2 Threads
 
 export MSORT_THREADS=2
 /usr/bin/time -p ./tmsort 75100000 < input dataa.txt
 
-1. 13.644825 seconds
-2. 13.947518 seconds
-3. 13.642553 seconds
+1. 10.644825 seconds
+2. 10.947518 seconds
+3. 10.642553 seconds
 4. ______ seconds
 
 #### 10 Threads
@@ -68,8 +68,8 @@ export MSORT_THREADS=10
 
 Sorting portion timings:
 
-1. 14.002196 seconds
-2. 13.453534 seconds
+1. 10.002196 seconds
+2. 10.453534 seconds
 3. ______ seconds
 4. ______ seconds
 
@@ -80,7 +80,7 @@ export MSORT_THREADS=20
 
 Sorting portion timings:
 
-1. 13.69 seconds
+1. 11.69 seconds
 2. ______ seconds
 3. ______ seconds
 4. ______ seconds
@@ -127,10 +127,10 @@ MSORT_THREADS=1 ./tmsort 75100000 < thousand-million.txt > /dev/null
 
 Sorting portion timings:
 
-1. 14.649396 seconds
-2. 14.627389 seconds
-3. 14.717335 seconds
-4. 14.631621 seconds
+1. 19.649396 seconds
+2. 19.627389 seconds
+3. 19.717335 seconds
+4. 19.631621 seconds
 
 #### 2 Threads
 
@@ -169,7 +169,7 @@ Sorting portion timings:
 
 The experiment results across two different hosts show that the optimal number of threads for the concurrent merge sort implementation varies significantly based on the hardware specifications of each platform.
 
-On Host 1 (Krish’s MacBook Pro), which has a powerful Apple M1 Max CPU with 10 cores and substantial cache, we see a moderate improvement in sorting time as the thread count increases from 1 to 2 and 10. However, as the thread count goes beyond 10, there is little to no improvement, and in some cases, performance slightly deteriorates. This result aligns with the capabilities of the host’s CPU, which can handle a high level of parallelism efficiently up to the core limit. Beyond 10 threads, the system likely experiences overhead from context switching and thread management, which reduces or cancels out the expected performance gains from additional threads.
+On Host 1 (Krish’s MacBook Pro), which has a powerful Apple M1 Max CPU with 10 cores and substantial cache, we see a moderate improvement in sorting time as the thread count increases from 1 to 2. However, as the thread count goes beyond 2, there is little to no improvement, and in some cases, performance slightly deteriorates. This result aligns with the capabilities of the host’s CPU, which can handle a high level of parallelism efficiently up to the core limit. Beyond 10 threads, the system likely experiences overhead from context switching and thread management, which reduces or cancels out the expected performance gains from additional threads.
 
 On Host 2 (GitHub Codespace), which has only 2 cores and more limited cache (32 KB L1, 512 KB L2), performance improvements are noticeable when moving from 1 to 2 threads. However, beyond 2 threads, we observe a decline in performance. This is expected, as the 2-core limit means additional threads cannot run in parallel; instead, they cause increased context switching and thread management overhead, leading to diminishing returns. The Codespace environment is not as capable of handling high thread counts as Host 1, which explains why performance stalls and even deteriorates with more than 2 threads.
 
