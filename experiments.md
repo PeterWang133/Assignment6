@@ -59,7 +59,7 @@ export MSORT_THREADS=2
 1. 10.644825 seconds
 2. 10.947518 seconds
 3. 10.642553 seconds
-4. ______ seconds
+4. 10.455486 seconds
 
 #### 10 Threads
 
@@ -70,8 +70,8 @@ Sorting portion timings:
 
 1. 10.002196 seconds
 2. 10.453534 seconds
-3. ______ seconds
-4. ______ seconds
+3. 10.458398 seconds
+4. 10.294855 seconds
 
 #### 20 Threads
 
@@ -81,9 +81,9 @@ export MSORT_THREADS=20
 Sorting portion timings:
 
 1. 11.69 seconds
-2. ______ seconds
-3. ______ seconds
-4. ______ seconds
+2. 10.989383 seconds
+3. 11.543849 seconds
+4. 11.349584 seconds
 
 
 *repeat sections as needed*
@@ -150,8 +150,8 @@ Sorting portion timings:
 
 1. 13.111056 seconds
 2. 12.895676 seconds
-3. ______ seconds
-4. ______ seconds
+3. 12.458688 seconds
+4. 12.239049 seconds
 
 #### 20 Threads
 
